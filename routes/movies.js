@@ -20,17 +20,17 @@ router.post(
       nameRU: Joi.string().required(),
       nameEN: Joi.string().required(),
       thumbnail: Joi.string().required().custom(urlValidator),
-      movieId: Joi.string().required().length(24).hex(),
+      movieId: Joi.number().required(),
     }),
   }),
   movies.saveMovies,
 );
 router.delete(
-  '/:movieId',
+  '/:_id',
   auth,
   celebrate({
-    body: Joi.object().keys({
-      movieId: Joi.string().length(24).hex(),
+    params: Joi.object().keys({
+      _id: Joi.string().hex().length(24),
     }),
   }),
   movies.removeMovie,

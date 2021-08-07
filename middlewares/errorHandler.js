@@ -1,6 +1,5 @@
 const HttpStatus = require('http-status-codes');
-
-const defaultError = 'Ошибка по умолчанию.';
+const { errorMessages } = require('../utils/errorMessages');
 
 // eslint-disable-next-line no-unused-vars
 module.exports.errorHandler = (error, req, res, next) => {
@@ -11,6 +10,6 @@ module.exports.errorHandler = (error, req, res, next) => {
   } else {
     res
       .status(HttpStatus.INTERNAL_SERVER_ERROR)
-      .json({ message: defaultError });
+      .json({ message: errorMessages.default });
   }
 };

@@ -1,20 +1,24 @@
 const jwt = require('jsonwebtoken');
-const { createError } = require('../utils/utils');
+const { isProduction } = require('../utils/utils');
+const { UnauthorizedError } = require('../utils/Error/UnauthorizedError');
+const { ForbiddenError } = require('../utils/Error/ForbiddenError');
+const { errorMessages } = require('../utils/errorMessages');
+
 require('dotenv').config();
 
 module.exports = (req, res, next) => {
-  const { token } = req.headers;
-  const { NODE_ENV, JWT_SECRET } = process.env;
-  const secret = NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret';
-  const authErrorMessage = 'Необходима авторизация';
-  if (!token) {
-    throw createError(authErrorMessage, 403);
+  const acceptedAuthType = 'Bearer ';
+  const { authorization } = req.headers;
+  const { JWT_SECRET } = process.env;
+  const secret = isProduction() ? JWT_SECRET : 'dev-secret';
+  if (!authorization || !authorization.startsWith(acceptedAuthType)) {
+    throw new ForbiddenError(errorMessages.authRequired);
   }
 
   try {
-    req.user = jwt.verify(token, secret);
+    req.user = jwt.verify(authorization.substring(acceptedAuthType.length), secret);
     return next();
   } catch (err) {
-    throw createError(authErrorMessage, 401);
+    throw new UnauthorizedError(errorMessages.authRequired);
   }
 };

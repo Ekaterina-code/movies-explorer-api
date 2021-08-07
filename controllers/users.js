@@ -1,24 +1,14 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const { BadRequestError } = require('../utils/Error/BadRequestError');
+const { NotFoundError } = require('../utils/Error/NotFoundError');
+const { UserConflictError } = require('../utils/Error/UserConflictError');
+const { UnauthorizedError } = require('../utils/Error/UnauthorizedError');
+const { asyncHandler, sendSuccess, getJwtSecret } = require('../utils/utils');
+const { errorMessages } = require('../utils/errorMessages');
 
 require('dotenv').config();
-
-const {
-  asyncHandler,
-  sendSuccess,
-  throwBadRequestError,
-  throwNotFoundError,
-  throwInternalServerError,
-} = require('../utils/utils');
-
-const errorMessages = {
-  incorrectPassword: 'Неправильные почта или пароль',
-  createUserBadRequest: 'Переданы некорректные данные при создании пользователя.',
-  updateProfileBadRequest: 'Переданы некорректные данные при обновлении профиля.',
-  getProfileBadRequest: 'Переданы некорректные данные при получаении профиля.',
-  userNotFound: 'Пользователь по указанному не найден.',
-};
 
 module.exports.createUser = asyncHandler((req, res) => {
   const {
@@ -38,62 +28,49 @@ module.exports.createUser = asyncHandler((req, res) => {
         });
       })
       .catch((error) => {
-        if (error.name === 'ValidationError') throwBadRequestError(errorMessages.createUserBadRequest);
-        if (error.name === 'MongoError' && error.code === 11000) {
-          const err = new Error('Пользователь уже существует');
-          err.statusCode = 409;
-          throw err;
-        }
-        throwInternalServerError();
+        if (error.name === 'ValidationError') throw new BadRequestError(errorMessages.createUserBadRequest);
+        if (error.name === 'MongoError' && error.code === 11000) throw new UserConflictError();
+        throw error;
       }));
 });
 
 module.exports.getCurrentUser = asyncHandler((req, res) => User
   .findOne({ _id: req.user._id })
-  .orFail(() => throwNotFoundError(res, errorMessages.userNotFound))
+  .orFail(() => new NotFoundError(errorMessages.userNotFound))
   .then((user) => sendSuccess(res, user))
   .catch((error) => {
-    if (error.name === 'CastError') throwBadRequestError(errorMessages.getProfileBadRequest);
-    if (error.statusCode === 404) throwNotFoundError(error);
-    throwInternalServerError();
+    if (error.name === 'CastError') throw new BadRequestError(errorMessages.getProfileBadRequest);
+    throw error;
   }));
 
 module.exports.editCurrentUser = asyncHandler((req, res) => {
   const { name, email } = req.body;
   return User
     .findByIdAndUpdate({ _id: req.user._id }, { name, email }, { runValidators: true, new: true })
-    .orFail(() => throwNotFoundError(res, errorMessages.userNotFound))
+    .orFail(() => new NotFoundError(res, errorMessages.userNotFound))
     .then((user) => sendSuccess(res, user))
     .catch((error) => {
-      if (error.name === 'CastError' || error.name === 'ValidationError') throwBadRequestError(res, errorMessages.updateProfileBadRequest);
-      if (error.statusCode === 404) throwNotFoundError(error);
-      throwInternalServerError(res);
+      if (error.name === 'CastError' || error.name === 'ValidationError') throw new BadRequestError(res, errorMessages.updateProfileBadRequest);
+      if (error.name === 'MongoError' && error.code === 11000) throw new UserConflictError();
+      throw error;
     });
 });
 
 module.exports.login = asyncHandler((req, res) => {
-  const incorrectPasswordErrorName = 'IncorrectPassword';
-  const { NODE_ENV, JWT_SECRET } = process.env;
-  const secret = NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret';
+  const secret = getJwtSecret();
+  if (!req.body.email || !req.body.password) throw new UnauthorizedError();
   return User
     .findOne({ email: req.body.email }).select('+password')
-    .orFail(() => throwNotFoundError(errorMessages.userNotFound))
+    .orFail(() => new NotFoundError(errorMessages.userNotFound))
     .then((user) => bcrypt
       .compare(req.body.password, user.password)
       .then((matched) => {
-        if (!matched) {
-          const error = new Error(errorMessages.incorrectPassword);
-          error.name = incorrectPasswordErrorName;
-          error.code = 401;
-          Promise.reject(error);
-        }
+        if (!matched) throw new UnauthorizedError();
         const token = jwt.sign({ _id: user._id }, secret, { expiresIn: '7d' });
         return sendSuccess(res, { _id: user._id, token });
       }))
     .catch((error) => {
-      if (error.name === 'CastError') throwBadRequestError(errorMessages.userNotFound);
-      if (error.name === incorrectPasswordErrorName) res.status(error.code).send(error.message);
-      if (error.statusCode === 404) throwNotFoundError(error.message);
-      throwInternalServerError();
+      if (error.name === 'CastError') throw new BadRequestError(errorMessages.userNotFound);
+      throw error;
     });
 });

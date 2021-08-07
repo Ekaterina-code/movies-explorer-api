@@ -40,7 +40,7 @@ const cardSchema = new mongoose.Schema({
     required: true,
   },
   movieId: {
-    type: objectIdType,
+    type: Number,
     required: true,
   },
   nameRU: {

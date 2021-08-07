@@ -5,11 +5,12 @@ const { errors } = require('celebrate');
 const cookieParser = require('cookie-parser');
 const { errorHandler } = require('./middlewares/errorHandler');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
+const { isProduction } = require('./utils/utils');
 
 const config = `${__dirname}/.env`;
 require('dotenv').config({ path: config });
 
-const { PORT = 3001, ALLOWED_CORS = 'http://localhost:3000' } = process.env;
+const { PORT = 3001, ALLOWED_CORS = 'http://localhost:3000', DB_CONN } = process.env;
 const allowedCors = ALLOWED_CORS.split(';').map((origin) => origin.trim());
 
 function setCorsHeaders(req, res, origin) {
@@ -22,7 +23,7 @@ function setCorsHeaders(req, res, origin) {
 }
 
 mongoose
-  .connect('mongodb://localhost:27017/moviesdb', {
+  .connect(isProduction() ? DB_CONN : 'mongodb://localhost:27017/moviesdb', {
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
