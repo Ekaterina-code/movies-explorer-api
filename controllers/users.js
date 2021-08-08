@@ -56,7 +56,6 @@ module.exports.editCurrentUser = asyncHandler((req, res) => {
 
 module.exports.login = asyncHandler((req, res) => {
   const secret = getJwtSecret();
-  if (!req.body.email || !req.body.password) throw new UnauthorizedError();
   return User
     .findOne({ email: req.body.email }).select('+password')
     .orFail(() => new NotFoundError(errorMessages.userNotFound))
