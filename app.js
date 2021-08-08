@@ -12,6 +12,7 @@ require('dotenv').config({ path: config });
 
 const { PORT = 3001, ALLOWED_CORS = 'http://localhost:3000', DB_CONN } = process.env;
 const allowedCors = ALLOWED_CORS.split(';').map((origin) => origin.trim());
+const mongoUri = isProduction() ? DB_CONN : 'mongodb://localhost:27017/moviesdb';
 
 function setCorsHeaders(req, res, origin) {
   const DEFAULT_ALLOWED_METHODS = 'GET,HEAD,PUT,PATCH,POST,DELETE';
@@ -21,9 +22,8 @@ function setCorsHeaders(req, res, origin) {
   res.header('Access-Control-Allow-Methods', DEFAULT_ALLOWED_METHODS);
   res.header('Access-Control-Allow-Headers', requestHeaders);
 }
-
 mongoose
-  .connect(isProduction() ? DB_CONN : 'mongodb://localhost:27017/moviesdb', {
+  .connect(mongoUri, {
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,

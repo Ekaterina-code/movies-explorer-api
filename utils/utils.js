@@ -1,5 +1,6 @@
 const HttpStatus = require('http-status-codes');
 const validator = require('validator');
+require('dotenv').config();
 
 const { NODE_ENV, JWT_SECRET } = process.env;
 
@@ -20,4 +21,5 @@ module.exports.urlValidator = (value, helpers) => (validator.isURL(value)
   : helpers.message('URL validation error'));
 
 module.exports.isProduction = () => isProduction();
+
 module.exports.getJwtSecret = () => (isProduction() ? JWT_SECRET : 'dev-secret');

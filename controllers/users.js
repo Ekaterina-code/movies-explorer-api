@@ -8,8 +8,6 @@ const { UnauthorizedError } = require('../utils/Error/UnauthorizedError');
 const { asyncHandler, sendSuccess, getJwtSecret } = require('../utils/utils');
 const { errorMessages } = require('../utils/errorMessages');
 
-require('dotenv').config();
-
 module.exports.createUser = asyncHandler((req, res) => {
   const {
     name, email, password,
