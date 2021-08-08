@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const { celebrate, Joi } = require('celebrate');
 const users = require('../controllers/users');
-const { throwNotFoundError } = require('../utils/utils');
 const auth = require('../middlewares/auth');
+const { NotFoundError } = require('../utils/Error/NotFoundError');
 
 router.post('/signin',
   celebrate({
@@ -25,5 +25,7 @@ router.post('/signup',
 
 router.all('*',
   auth,
-  () => throwNotFoundError('Страница не найдена'));
+  () => {
+    throw new NotFoundError('Страница не найдена');
+  });
 module.exports = router;
